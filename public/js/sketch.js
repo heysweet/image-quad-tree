@@ -2,7 +2,9 @@ var img;
 var frames;
 var SCALAR;
 var iSCALAR;
-var shouldDraw;
+var lastUpdate;
+var MIN_SUBDIVIDE_MILLIS = 10;
+var toDraw;
 
 var frameTree;
 
@@ -70,6 +72,10 @@ function getAverageColor(img, x, y, dx, dy) {
 }
 
 function subdivide(frame) {
+  if (frame.w <= 1 || frame.h <= 1) {
+    return null;
+  }
+
   var halfWidth = frame.w / 2;
   var halfHeight = frame.h / 2;
 
@@ -131,20 +137,30 @@ function setup() {
 
   var c = getAverageColor(img, 0, 0, img.width, img.height);
 
-  shouldDraw = true;
   noStroke();
 
-  frameTree = QuadTree(0, 0, width, height);
-  frameTree.put({
+  toDraw = [{
     x : 0,
     y : 0,
     w : img.width,
     h : img.height,
     color : c.color,
     avgDist : c.avgDist
-  });
+  }];
+
+  frameTree = QuadTree(0, 0, width, height);
+  frameTree.put(toDraw[0]);
+
 
   window.onmousemove = function (e) {
+    var now = Date.now();
+
+    if (lastUpdate + MIN_SUBDIVIDE_MILLIS >= now) {
+      return;
+    }
+
+    lastUpdate = now;
+
     var frames = frameTree.get({
       x : (e.pageX - mouseSize) * iSCALAR,
       y : (e.pageY - mouseSize) * iSCALAR,
@@ -155,16 +171,20 @@ function setup() {
     var _frames = [];
 
     for (var i = 0; i < frames.length; i++) {
-      frameTree.remove(frames[i]);
+      var subFrames = subdivide(frames[i]);
 
-      _frames = _frames.concat(subdivide(frames[i]));
+      if (subFrames) {
+        frameTree.remove(frames[i]);
+
+        toDraw = toDraw.concat(subFrames);
+
+        _frames = _frames.concat(subFrames); 
+      }
     }
 
     for (var j = 0; j < _frames.length; j++) {
       frameTree.put(_frames[j]);
     }
-
-    shouldDraw = true;
   };
 }
 
@@ -173,7 +193,7 @@ function getPixels() {
   return img.pixels;
 }
 
-var mouseSize = 10;
+var mouseSize = 2;
 
 function drawFrame(frame) {
   fill(frame.color.r, frame.color.g, frame.color.b, frame.color.a);
@@ -188,19 +208,12 @@ function drawFrame(frame) {
 }
 
 function draw() {
-  if (shouldDraw){
-    background(255,255,255);
-    shouldDraw = false;
-
-    var results = frameTree.get({
-      x : 0,
-      y : 0,
-      w : img.width,
-      h : img.height,
-    });
-
-    for (var i = 0; i < results.length; i++) {
-      drawFrame(results[i]);
+  if (toDraw.length >= 0) {
+    debugger;
+    for (var i = 0; i < toDraw.length; i++) {
+      drawFrame(toDraw[i]);
     }
+
+    toDraw = [];
   }
 }
