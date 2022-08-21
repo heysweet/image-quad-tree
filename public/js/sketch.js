@@ -10,6 +10,7 @@ var iSCALAR;
 var lastUpdate;
 var MIN_SUBDIVIDE_MILLIS = 10;
 var toDraw;
+let shouldSubdivideOnMouseMove = false;
 
 var frameTree;
 
@@ -17,6 +18,7 @@ var frameTree;
 // spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
 var keys = {37: 1, 38: 1, 39: 1, 40: 1};
 const zKeyCode = 90;
+const xKeyCode = 88;
 
 function preventDefault(e) {
   e = e || window.event;
@@ -60,6 +62,8 @@ function onKeyDown(e) {
         return false;
     } if (e.keyCode === zKeyCode) {
       doSubdivide();
+    } if (e.keyCode === xKeyCode) {
+      shouldSubdivideOnMouseMove = !shouldSubdivideOnMouseMove;
     }
 }
 
@@ -219,6 +223,17 @@ function setup() {
 
   window.onmousemove = function (e) {
     lastMouse = e;
+    if (shouldSubdivideOnMouseMove) {
+      var now = Date.now();
+
+      if (lastUpdate + MIN_SUBDIVIDE_MILLIS >= now) {
+        return;
+      }
+
+      lastUpdate = now;
+      
+      doSubdivide();
+    }
   };
 }
 
