@@ -243,7 +243,6 @@ function drawFrame(frame) {
 
 function draw() {
   if (toDraw.length >= 0) {
-    debugger;
     for (var i = 0; i < toDraw.length; i++) {
       drawFrame(toDraw[i]);
     }
