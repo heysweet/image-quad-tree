@@ -1,3 +1,8 @@
+/**
+ * On "z" keypress, subdivide the drawing based on where
+ * the mouse is.
+ */
+
 var img;
 var frames;
 var SCALAR;
@@ -11,6 +16,7 @@ var frameTree;
 // left: 37, up: 38, right: 39, down: 40,
 // spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
 var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+const zKeyCode = 90;
 
 function preventDefault(e) {
   e = e || window.event;
@@ -19,10 +25,41 @@ function preventDefault(e) {
   e.returnValue = false;  
 }
 
-function preventDefaultForScrollKeys(e) {
+let lastMouse;
+
+function doSubdivide() {
+  var frames = frameTree.get({
+    x : (lastMouse.pageX - mouseSize) * iSCALAR,
+    y : (lastMouse.pageY - mouseSize) * iSCALAR,
+    w : 2 * mouseSize,
+    h : 2 * mouseSize
+  });
+
+  var _frames = [];
+
+  for (var i = 0; i < frames.length; i++) {
+    var subFrames = subdivide(frames[i]);
+
+    if (subFrames) {
+      frameTree.remove(frames[i]);
+
+      toDraw = toDraw.concat(subFrames);
+
+      _frames = _frames.concat(subFrames); 
+    }
+  }
+
+  for (var j = 0; j < _frames.length; j++) {
+    frameTree.put(_frames[j]);
+  }
+};
+
+function onKeyDown(e) {
     if (keys[e.keyCode]) {
         preventDefault(e);
         return false;
+    } if (e.keyCode === zKeyCode) {
+      doSubdivide();
     }
 }
 
@@ -32,7 +69,7 @@ function disableScroll() {
   window.onwheel = preventDefault; // modern standard
   window.onmousewheel = document.onmousewheel = preventDefault; // older browsers, IE
   window.ontouchmove  = preventDefault; // mobile
-  document.onkeydown  = preventDefaultForScrollKeys;
+  document.onkeydown  = onKeyDown;
 }
 
 function preload() {
@@ -181,38 +218,7 @@ function setup() {
   disableScroll();
 
   window.onmousemove = function (e) {
-    var now = Date.now();
-
-    if (lastUpdate + MIN_SUBDIVIDE_MILLIS >= now) {
-      return;
-    }
-
-    lastUpdate = now;
-
-    var frames = frameTree.get({
-      x : (e.pageX - mouseSize) * iSCALAR,
-      y : (e.pageY - mouseSize) * iSCALAR,
-      w : 2 * mouseSize,
-      h : 2 * mouseSize
-    });
-
-    var _frames = [];
-
-    for (var i = 0; i < frames.length; i++) {
-      var subFrames = subdivide(frames[i]);
-
-      if (subFrames) {
-        frameTree.remove(frames[i]);
-
-        toDraw = toDraw.concat(subFrames);
-
-        _frames = _frames.concat(subFrames); 
-      }
-    }
-
-    for (var j = 0; j < _frames.length; j++) {
-      frameTree.put(_frames[j]);
-    }
+    lastMouse = e;
   };
 }
 
